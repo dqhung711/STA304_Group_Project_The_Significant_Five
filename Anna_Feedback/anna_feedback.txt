@@ -1,0 +1,23 @@
+You will need to email me when you have changed your survey for me to post on Piazza.
+
+Disclaimer: in the process of constructing feedback, I recorded my audio and got AI to rephrase my feedback in a concise, clear manner so that I can mark faster + you get more detailed feedback. I did not run any of the assignments through AI.
+
+Survey introduction
+You state that responses will be confidential. Please avoid that wording, because it does not accurately describe how the responses are handled. It is enough to say that you will not collect names, student numbers, or email addresses.
+
+Chi-square test of independence
+Please do not use the chi-square test of independence to compare monthly discretionary spending with willingness to pay in an embarrassing situation. Monthly spending is quantitative in nature, and the chi-square test of independence is for two categorical variables, so it is not appropriate here.
+
+Rating scales
+Several of your questions use a 1 to 5 scale. Please extend these to 1 to 10. A wider scale gives you more nuance, which matters since you plan to use Cronbach's alpha and are treating these responses as quantitative.
+
+Discretionary spending question
+You ask how much money students have available for discretionary spending in a typical month after essential expenses, using broad ranges. (Same with maximum additional amount.) Please either narrow the ranges or ask for an exact number. Broad ranges give you few distinct responses, which makes it harder to get meaningful results from your quantitative analysis.
+
+Gift card raffle
+I want as little private information collected as possible. Instead of running the raffle yourselves, please send me a random selection based on students' course-specific IDs, and I will administer the gift cards. This avoids anyone accidentally uploading an unclean file that includes email addresses.
+
+(-0.05 due to current version of the questionnaire)
+
+0.95/1
+
