@@ -1,0 +1,4 @@
+Codebook: budget_cad
+Your codebook describes budget_CAD as the reported range represented by its midpoint. Your survey no longer asks for a range here. Students now enter an actual number for their typical monthly budget, so the codebook description does not match what you actually collected. Please correct this entry. (-0.05)
+
+0.95/1
