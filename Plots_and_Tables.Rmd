@@ -1,0 +1,107 @@
+---
+title: "STA304 - Plots and Tables"
+author: "Hung Dang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+This is regular text. You can write **bold**, *italic*, and lists here.
+You can also put R results inside a sentence, like this: today is `r Sys.Date()`.
+
+# Load packages
+
+```{r packages, echo=FALSE}
+# install.packages(c("easystats", "readr", "knitr", "ggplot2"))
+library(easystats)   # loads datawizard, see, correlation, report, etc.
+library(readr)
+library(knitr)
+library(ggplot2)
+```
+
+```{r read-data, echo=FALSE}
+dat <- read.csv("The_Significant_Five_dataset.csv") 
+```
+
+# Table: proportion of Yes / No
+
+Replace `q_yesno` with your Yes/No column name.
+
+```{r yes-no-table}
+vars <- c("embarrassed_easily", "self_conscious", "pay5_lateness", "buy20_shirt")
+
+labels <- c(
+  embarrassed_easily = "Gets embarrassed easily in minor awkward situations",
+  self_conscious     = "Feeling self-conscious when making a small mistake in front of others",
+  pay5_lateness      = "Paying $5 to silently check-in due to lateness",
+  buy20_shirt        = "Paying $20 to change a new shirt due to a large stain on the old one"
+)
+
+make_row <- function(v) {
+  x <- dat[[v]]
+  x <- x[!is.na(x)]
+
+  n_yes <- sum(x == 1)
+  n_no  <- sum(x == 0)
+  total <- n_yes + n_no
+
+  data.frame(
+    Question = labels[[v]],          # <- uses the friendly label
+    Yes   = sprintf("%d (%.1f%%)", n_yes, 100 * n_yes / total),
+    No    = sprintf("%d (%.1f%%)", n_no,  100 * n_no  / total),
+    Total = total
+  )
+}
+
+yes_no_table <- do.call(rbind, lapply(vars, make_row))
+
+knitr::kable(
+  yes_no_table,
+  row.names = FALSE,
+  align = c("l", "c", "c", "c"),
+  booktabs = TRUE,
+  caption = "Number and percentage of Yes and No answers"
+)
+```
+
+# Scatter plot: two Likert-scale questions
+
+Likert items are discrete (e.g., 1-5), so points overlap heavily. Using
+`geom_jitter()` spreads them out so you can see density. Replace `likert_a`
+and `likert_b` with your column names.
+
+```{r likert-scatter}
+ggplot(dat, aes(x = general_embarrassment, y = judgment_worry)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "general_embarrassment", y = "judgment_worry",
+       title = "Relationship between General embarrassment and Judgement worry") +
+  theme_modern()    # theme from the 'see' package (easystats)
+
+ggplot(dat, aes(x = judgment_worry, y = communication_discomfort)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "judgment_worry", y = "communication_discomfort",
+       title = "Relationship between Judgment worry and Communication discomfort") +
+  theme_modern()
+
+ggplot(dat, aes(x = communication_discomfort, y = general_embarrassment)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Communication Discomfort Level", # please fix this, just don't use underscores for plotting
+       y = "general_embarrassment",
+       title = "Relationship between Communication discomfort and General embarrassment") +
+  theme_modern()
+```
+
