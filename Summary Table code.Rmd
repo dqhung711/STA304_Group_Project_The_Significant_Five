@@ -1,0 +1,96 @@
+---
+title: "Summary Table Statistics"
+author: "Frank"
+date: "2026-10-23"
+output: pdf_document
+---
+## Computing Summary Statistics
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+
+data <- read.csv("The_Significant_Five_dataset.csv")
+```
+
+### Quantitative Variables
+
+```{r quantitative-summary, echo=FALSE}
+quan_vars <- c(
+  "budget_cad",
+  "judgment_worry",
+  "general_embarrassment",
+  "communication_discomfort",
+  "max_wtp_cad"
+)
+
+summary_table <- data.frame(
+  Variable = quan_vars,
+  Median = sapply(data[quan_vars], median),
+  Mean = sapply(data[quan_vars], mean),
+  SD = sapply(data[quan_vars], sd),
+  IQR = sapply(data[quan_vars], IQR),
+  Range = sapply(data[quan_vars], function(x) {
+    sprintf("(%.2f, %.2f)", min(x), max(x))
+  }),
+  n = sapply(data[quan_vars], length)
+)
+summary_table[, 2:5] <- round(summary_table[, 2:5], 2)
+rownames(summary_table) <- NULL
+kable(
+  summary_table,
+  caption = "Summary Statistics",
+  booktabs = TRUE,
+  align = "lrrrrrr"
+)
+```
+
+### Brief Interpretation
+
+Of the 92 respondents, 58 (63.04%) were domestic students and 34 (36.96%) were international students. Most respondents reported that they embarrassed easily (66.30%) and were self-conscious (77.17%). For the willingness-to-pay scenarios, 22.83% reported willingness to pay CAD 5 to avoid lateness, while 61.96% indicated willingness to buy the CAD 20 shirt in the specified scenario.
+
+## Frequency Tables
+
+
+```{r qualitative-summary, echo=FALSE}
+qual_vars <- c(
+  "student_status",
+  "embarrassed_easily",
+  "self_conscious",
+  "pay5_lateness",
+  "buy20_shirt"
+)
+
+freq_table <- do.call(rbind, lapply(qual_vars, function(v) {
+  counts <- table(data[[v]])
+  percentages <- prop.table(counts) * 100
+
+  data.frame(
+    Variable = v,
+    Value = names(counts),
+    N = as.vector(counts),
+    `Raw %` = round(as.vector(percentages), 2),
+    `Valid %` = round(as.vector(percentages), 2),
+    `Cumulative %` = round(cumsum(as.vector(percentages)), 2),
+    check.names = FALSE
+  )
+}))
+
+rownames(freq_table) <- NULL
+
+kable(
+  freq_table,
+  caption = "Frequency Table",
+  booktabs = TRUE,
+  align = "lrrrrr"
+)
+```
+
+## Brief Interpretation
+
+Of the 92 respondents, 58 (63.04%) were domestic students and 34 (36.96%) were international students. The frequency tables also summarize responses to the embarrassment-related questions and the two willingness-to-pay scenarios.
+
+## Appendix:
+
+```{r appendix-code, ref.label=c("setup", "quantitative-summary", "qualitative-summary"), echo=TRUE, eval=FALSE}
+```
