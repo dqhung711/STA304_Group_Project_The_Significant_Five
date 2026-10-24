@@ -278,13 +278,83 @@ Residuals are approximately symmetric, with small Q-Q departures and a modest in
 These plots assess the relationship shapes relevant to the six primary Spearman analyses. Binary responses are shown as two groups; budget and the three ordinal ratings are shown as scatter plots.
 
 ```{r}
+#| label: setup-wtp-relationships
+#| include: false
+plot_wtp_relationships <- function(d, panels = 1:6, footer = TRUE) {
+vars <- c("budget_cad", "embarrassed_easily", "self_conscious",
+          "judgment_worry", "general_embarrassment", "communication_discomfort")
+labels <- c("Monthly discretionary budget ($)", "Easily embarrassed",
+            "Self-conscious after mistakes", "Worry about others' judgment (1-10)",
+            "General embarrassment (1-10)", "Communication discomfort (1-10)")
+stopifnot(all(c(vars, "max_wtp_cad") %in% names(d)))
+stopifnot(nrow(d) > 1, !anyNA(d[c(vars, "max_wtp_cad")]))
+stopifnot(all(vapply(d[c(vars, "max_wtp_cad")], is.numeric, logical(1))))
+stopifnot(all(d$max_wtp_cad >= 0), all(d$budget_cad >= 0))
+for (v in vars[2:3]) stopifnot(all(d[[v]] %in% 0:1))
+for (v in vars[4:6]) stopifnot(all(d[[v]] %in% 1:10))
+
+# asinh keeps zero values and every high response visible, without adding a constant.
+# The axis labels show original dollar values. No model is fitted on this display scale.
+y <- asinh(d$max_wtp_cad)
+ticks <- sort(unique(c(0, 1, 2, 5, 10, 20, 50, 100, 150, max(d$max_wtp_cad))))
+ticks <- ticks[ticks <= max(d$max_wtp_cad)]
+draw_panel <- function(k) {
+  set.seed(304 + k)
+  x <- d[[vars[k]]]
+  binary <- k %in% 2:3
+  xlim <- if (binary) c(.5, 2.5) else if (k >= 4) c(.65, 10.35) else range(x)
+  plot(NA, xlim = xlim, ylim = c(-.10, max(y) + .12),
+       xlab = labels[k], ylab = "Maximum WTP (asinh spacing)",
+       main = paste0(LETTERS[k], ". ", strsplit(labels[k], " (", fixed = TRUE)[[1]][1]),
+       axes = FALSE, bty = "l")
+  abline(h = asinh(ticks), col = "#E7EBEE", lwd = .7)
+  axis(2, at = asinh(ticks), labels = paste0("$", format(ticks, trim = TRUE)), las = 1)
+  if (binary) {
+    axis(1, at = 1:2, labels = c("No", "Yes"))
+    # Compute hinges, whiskers and outliers in original dollars first.
+    boxes <- boxplot(d$max_wtp_cad ~ factor(x, levels = 0:1), plot = FALSE)
+    boxes$stats <- asinh(boxes$stats)
+    boxes$out <- asinh(boxes$out)
+    bxp(boxes, add = TRUE, axes = FALSE, outline = FALSE,
+        col = c("#DEE8EF", "#DDEEEA"), border = "#294C60", boxwex = .45)
+    points(x + 1 + runif(length(x), -.17, .17), y,
+           pch = 16, cex = .65, col = adjustcolor("#294C60", alpha.f = .55))
+  } else {
+    if (k >= 4) axis(1, at = 1:10) else axis(1, at = pretty(x), labels = paste0("$", format(pretty(x), trim = TRUE)))
+    shown_x <- if (k >= 4) x + runif(length(x), -.15, .15) else x
+    points(shown_x, y, pch = 16, cex = .7,
+           col = adjustcolor("#294C60", alpha.f = .55))
+  }
+  box(bty = "l", col = "#596571")
+}
+
+
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mfrow = if (length(panels) == 6) c(2, 3) else c(1, 1),
+      mar = c(4.7, 4.7, 3, 1), oma = if (footer) c(3.4, 0, 0, 0) else c(0, 0, 0, 0),
+      mgp = c(3, .8, 0), cex = .85,
+      col.lab = "#294C60", col.main = "#294C60")
+  for (k in panels) draw_panel(k)
+  if (footer) {
+    note <- sprintf("All %d respondents retained: %d zero responses; maximum WTP $%s.",
+                    nrow(d), sum(d$max_wtp_cad == 0),
+                    format(max(d$max_wtp_cad), trim = TRUE))
+    mtext(note, side = 1, outer = TRUE, line = 1, cex = .8)
+    mtext("Asinh spacing; ticks show original dollars. Horizontal jitter is display-only.",
+          side = 1, outer = TRUE, line = 2.2, cex = .8)
+  }
+  invisible(NULL)
+}
+```
+
+```{r}
 #| label: fig-wtp-six
 #| fig-cap: "Maximum WTP versus the six measured characteristics. Higher ordinal ratings tend to accompany higher WTP, while budget shows a less clear pattern and binary-group distributions overlap. Asinh spacing retains all responses; horizontal jitter is display-only."
 #| fig-width: 12.5
 #| fig-height: 8
 #| out-width: "100%"
 #| fig-pos: H
-source("plot_wtp_relationships.R", local = TRUE)
 plot_wtp_relationships(dat)
 ```
 
@@ -352,7 +422,7 @@ All 14 comparisons are retained for transparent Holm correction. Supplementary s
 
 # Appendix B: Code
 
-Code is shown without repeat execution. Data operations, figures and statistical tests are separated below. The CSV and WTP plotting script must accompany the QMD.
+Code is shown without repeat execution. Data operations, figures and statistical tests are separated below. Only the CSV is required alongside the QMD; all R functions are included here.
 
 ## Data Operations and Descriptive Statistics
 
@@ -387,84 +457,13 @@ These R chunks fit the two supplementary regression models and generate the resi
 
 ## WTP Relationship Plots
 
-This function is sourced from plot_wtp_relationships.R to generate the six-panel figure.
+The following shared R chunks define the plotting function and generate the six-panel figure.
 
 ```{r}
 #| label: appendix-wtp-code
 #| echo: true
 #| eval: false
-# All calculations and figures use R. Source this file to load the plotting function.
-# As a standalone script: Rscript plot_wtp_relationships.R [input.csv] [output_folder]
-plot_wtp_relationships <- function(d, panels = 1:6, footer = TRUE) {
-vars <- c("budget_cad", "embarrassed_easily", "self_conscious",
-          "judgment_worry", "general_embarrassment", "communication_discomfort")
-labels <- c("Monthly discretionary budget ($)", "Easily embarrassed",
-            "Self-conscious after mistakes", "Worry about others' judgment (1-10)",
-            "General embarrassment (1-10)", "Communication discomfort (1-10)")
-stopifnot(all(c(vars, "max_wtp_cad") %in% names(d)))
-stopifnot(nrow(d) > 1, !anyNA(d[c(vars, "max_wtp_cad")]))
-stopifnot(all(vapply(d[c(vars, "max_wtp_cad")], is.numeric, logical(1))))
-stopifnot(all(d$max_wtp_cad >= 0), all(d$budget_cad >= 0))
-for (v in vars[2:3]) stopifnot(all(d[[v]] %in% 0:1))
-for (v in vars[4:6]) stopifnot(all(d[[v]] %in% 1:10))
-
-# asinh keeps zero values and every high response visible, without adding a constant.
-# The axis labels show original dollar values. No model is fitted on this display scale.
-y <- asinh(d$max_wtp_cad)
-ticks <- sort(unique(c(0, 1, 2, 5, 10, 20, 50, 100, 150, max(d$max_wtp_cad))))
-ticks <- ticks[ticks <= max(d$max_wtp_cad)]
-draw_panel <- function(k) {
-  set.seed(304 + k)
-  x <- d[[vars[k]]]
-  binary <- k %in% 2:3
-  xlim <- if (binary) c(.5, 2.5) else if (k >= 4) c(.65, 10.35) else range(x)
-  plot(NA, xlim = xlim, ylim = c(-.10, max(y) + .12),
-       xlab = labels[k], ylab = "Maximum WTP (asinh spacing)",
-       main = paste0(LETTERS[k], ". ", strsplit(labels[k], " (", fixed = TRUE)[[1]][1]),
-       axes = FALSE, bty = "l")
-  abline(h = asinh(ticks), col = "#E7EBEE", lwd = .7)
-  axis(2, at = asinh(ticks), labels = paste0("$", format(ticks, trim = TRUE)), las = 1)
-  if (binary) {
-    axis(1, at = 1:2, labels = c("No", "Yes"))
-    # Compute hinges, whiskers and outliers in original dollars first.
-    boxes <- boxplot(d$max_wtp_cad ~ factor(x, levels = 0:1), plot = FALSE)
-    boxes$stats <- asinh(boxes$stats)
-    boxes$out <- asinh(boxes$out)
-    bxp(boxes, add = TRUE, axes = FALSE, outline = FALSE,
-        col = c("#DEE8EF", "#DDEEEA"), border = "#294C60", boxwex = .45)
-    points(x + 1 + runif(length(x), -.17, .17), y,
-           pch = 16, cex = .65, col = adjustcolor("#294C60", alpha.f = .55))
-  } else {
-    if (k >= 4) axis(1, at = 1:10) else axis(1, at = pretty(x), labels = paste0("$", format(pretty(x), trim = TRUE)))
-    shown_x <- if (k >= 4) x + runif(length(x), -.15, .15) else x
-    points(shown_x, y, pch = 16, cex = .7,
-           col = adjustcolor("#294C60", alpha.f = .55))
-  }
-  box(bty = "l", col = "#596571")
-}
-
-
-  old_par <- par(no.readonly = TRUE)
-  on.exit(par(old_par))
-  par(mfrow = if (length(panels) == 6) c(2, 3) else c(1, 1),
-      mar = c(4.7, 4.7, 3, 1), oma = if (footer) c(3.4, 0, 0, 0) else c(0, 0, 0, 0),
-      mgp = c(3, .8, 0), cex = .85,
-      col.lab = "#294C60", col.main = "#294C60")
-  for (k in panels) draw_panel(k)
-  if (footer) {
-    note <- sprintf("All %d respondents retained: %d zero responses; maximum WTP $%s.",
-                    nrow(d), sum(d$max_wtp_cad == 0),
-                    format(max(d$max_wtp_cad), trim = TRUE))
-    mtext(note, side = 1, outer = TRUE, line = 1, cex = .8)
-    mtext("Asinh spacing; ticks show original dollars. Horizontal jitter is display-only.",
-          side = 1, outer = TRUE, line = 2.2, cex = .8)
-  }
-  invisible(NULL)
-}
-
-# Generate the six-panel figure using the data loaded above.
-plot_wtp_relationships(dat)
-
+#| ref.label: [setup-wtp-relationships, fig-wtp-six]
 ```
 
 ## Statistical Tests
