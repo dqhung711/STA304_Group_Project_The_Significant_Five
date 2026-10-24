@@ -1,0 +1,539 @@
+---
+title: "Exploratory Data Analysis"
+subtitle: "Spending Choices and Minor Embarrassments"
+author: "The Significant Five"
+date: today
+engine: knitr
+format:
+  pdf:
+    toc: true
+    linkcolor: ReportBlue
+    urlcolor: ReportBlue
+    documentclass: scrartcl
+    fontsize: 11pt
+    geometry:
+      - top=0.85in
+      - bottom=0.85in
+      - left=0.85in
+      - right=0.85in
+    linestretch: 1.02
+    toc-depth: 2
+    colorlinks: true
+    keep-tex: true
+    include-in-header:
+      text: |
+        \usepackage{xcolor}
+        \usepackage{caption}
+        \usepackage{fvextra}
+        \fvset{breaklines=true,breakanywhere=true,fontsize=\footnotesize}
+        \usepackage{scrlayer-scrpage}
+        \definecolor{ReportBlue}{HTML}{294C60}
+        \definecolor{ReportGrey}{HTML}{596571}
+        \addtokomafont{disposition}{\color{ReportBlue}}
+        \addtokomafont{caption}{\small\color{ReportGrey}}
+        \captionsetup{labelfont=bf,justification=raggedright,singlelinecheck=false}
+        \renewcommand{\arraystretch}{1.08}
+        \setlength{\tabcolsep}{7pt}
+        \clearpairofpagestyles
+        \ihead{\small\sffamily\color{ReportGrey}The Significant Five}
+        \ohead{\small\sffamily\color{ReportGrey}Exploratory Data Analysis}
+        \cfoot{\small\sffamily\pagemark}
+        \pagestyle{scrheadings}
+        \raggedbottom
+    number-sections: true
+    pdf-engine: xelatex
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup-plots
+#| include: false
+library(ggplot2)
+library(see)
+report_theme <- function() {
+  see::theme_modern(base_size = 12) +
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(colour = "#E6EBEF", linewidth = 0.3),
+          axis.title = element_text(colour = "#294C60"),
+          axis.text = element_text(colour = "#495865"),
+          plot.margin = margin(10, 14, 8, 10))
+}
+dat <- read.csv("The_Significant_Five_dataset.csv",
+                colClasses = c(studentID = "character"))
+stopifnot(nrow(dat) == 92, !anyNA(dat))
+
+d <- dat
+n <- nrow(d)
+
+```
+
+{{< pagebreak >}}
+
+# Summary Statistics
+
+## Numerical Variables
+
+```{r}
+#| label: tbl-summary-numeric
+numeric_vars <- c("budget_cad", "judgment_worry", "general_embarrassment",
+                  "communication_discomfort", "max_wtp_cad")
+numeric_labels <- c("Budget", "Judgment worry", "General embarrassment",
+                    "Communication discomfort", "Maximum WTP")
+summary_table <- data.frame(
+  Variable = numeric_labels,
+  Median = sapply(d[numeric_vars], median),
+  Mean = sapply(d[numeric_vars], mean),
+  SD = sapply(d[numeric_vars], sd),
+  IQR = sapply(d[numeric_vars], IQR),
+  Range = sapply(d[numeric_vars], function(x) paste(range(x), collapse = "-")),
+  n = n, row.names = NULL)
+for (j in 2:5) {
+  summary_table[[j]] <- sprintf("%.2f", summary_table[[j]])
+  summary_table[[j]][c(1, 5)] <- paste0("$", summary_table[[j]][c(1, 5)])
+}
+summary_table$Range[c(1, 5)] <- sapply(d[c("budget_cad", "max_wtp_cad")],
+  function(x) paste0("$", min(x), "-$", max(x)))
+knitr::kable(summary_table, align = "lrrrrlr",
+  caption = "Numerical summaries (n = 92). SD: standard deviation; IQR: interquartile range.")
+```
+
+## Categorical Variables
+
+```{r}
+#| label: tbl-summary-categorical
+qual_vars <- c("student_status", "embarrassed_easily", "self_conscious",
+               "pay5_lateness", "buy20_shirt")
+qual_labels <- c("Student status", "Easily embarrassed", "Self-conscious after mistakes",
+                 "Pay $5 to avoid explaining lateness", "Buy $20 replacement shirt")
+freq_table <- do.call(rbind, lapply(seq_along(qual_vars), function(i) {
+  counts <- table(d[[qual_vars[i]]])
+  response <- names(counts)
+  if (i > 1) response <- c("No", "Yes")[as.integer(response) + 1]
+  data.frame(Variable = qual_labels[i], Response = response,
+             n = as.vector(counts), Percent = round(100 * as.vector(counts) / n, 2))
+}))
+knitr::kable(freq_table, digits = 2,
+  caption = "Categorical frequencies. No values were missing; binary items use No = 0 and Yes = 1.")
+```
+
+## Interpretation
+
+All 92 responses were complete. Budget and maximum willingness to pay (WTP) were right-skewed: their means exceeded their medians. Median WTP was \$0, with 60 zero responses and a maximum of \$150. Most respondents reported being easily embarrassed or self-conscious. Payment willingness differed between the lateness (22.83%) and replacement-shirt (61.96%) scenarios; because both price and context differed, this comparison cannot isolate a price effect.
+
+{{< pagebreak >}}
+
+# Graphical Analysis
+
+## Relationships Between the Three Ratings
+
+```{r}
+#| label: fig-embarrassment-1
+#| fig-cap: "General embarrassment and worry about being judged. Higher embarrassment ratings tend to accompany greater worry."
+#| fig-width: 7.5
+#| fig-height: 4.2
+#| fig-pos: H
+#| out-width: "85%"
+#| fig-align: center
+ggplot(dat, aes(x = general_embarrassment, y = judgment_worry)) +
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", se = TRUE, color = "#287A78") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Level of embarrassment", y = "Worry about being judged",
+       title = NULL) +
+  report_theme()
+```
+
+```{r}
+#| label: fig-embarrassment-2
+#| fig-cap: "Worry about being judged and communication discomfort. Higher worry ratings tend to accompany greater communication discomfort."
+#| fig-width: 7.5
+#| fig-height: 4.2
+#| fig-pos: H
+#| out-width: "85%"
+#| fig-align: center
+ggplot(dat, aes(x = judgment_worry, y = communication_discomfort)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "#294C60") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Worry about being judged", y = "Communication discomfort",
+       title = NULL) +
+  report_theme()
+```
+
+```{r}
+#| label: fig-embarrassment-3
+#| fig-cap: "Communication discomfort and general embarrassment. Respondents reporting greater communication discomfort tend to report greater embarrassment."
+#| fig-width: 7.5
+#| fig-height: 4.2
+#| fig-pos: H
+#| out-width: "85%"
+#| fig-align: center
+ggplot(dat, aes(x = communication_discomfort, y = general_embarrassment)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "#7A6296") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Communication discomfort", 
+       y = "Level of embarrassment",
+       title = NULL) +
+  report_theme()
+```
+
+The three ratings show positive associations. Lines and bands are descriptive linear fits and 95% confidence intervals for the fitted mean. They do not establish causation or agreement between ratings; overlapping points reflect repeated 1-10 scores.
+
+# Model Assumptions
+
+Two supplementary regressions are checked below using Q-Q, residual-distribution, residual-versus-fitted and scale-location plots. These diagnostics concern the regressions; the primary Spearman analyses do not require normally distributed or constant-variance regression errors. Following the course instructions, responses are treated as an independent random sample.
+
+```{r}
+#| label: setup-regression-diagnostics
+#| include: false
+regression_diagnostics <- function(model) {
+  old_par <- par(mfrow = c(2, 2), mar = c(4.3, 4.3, 2.5, 1),
+                 col.main = "#294C60", col.lab = "#294C60", col.axis = "#495865",
+                 mgp = c(2.6, 0.8, 0), cex = 0.85)
+  on.exit(par(old_par))
+  residual <- residuals(model)
+  standardized <- rstandard(model)
+  fitted <- fitted(model)
+  qqnorm(standardized, main = "Normal Q-Q", pch = 16,
+         col = "#496785", ylab = "Standardized residuals")
+  qqline(standardized, col = "#D76A2B", lwd = 2)
+  dens <- density(residual)
+  grid <- seq(min(dens$x), max(dens$x), length.out = 300)
+  normal <- dnorm(grid, mean(residual), sd(residual))
+  plot(dens, main = "Residual distribution", xlab = "Residuals",
+       ylim = c(0, max(dens$y, normal)), col = "#496785", lwd = 2)
+  lines(grid, normal, col = "#D76A2B", lwd = 2)
+  plot(fitted, residual, main = "Residuals vs fitted", pch = 16,
+       col = "#496785", xlab = "Fitted values", ylab = "Residuals")
+  abline(h = 0, col = "grey70", lty = 2)
+  lines(lowess(fitted, residual), col = "#D76A2B", lwd = 2)
+  spread <- sqrt(abs(standardized))
+  plot(fitted, spread, main = "Scale-location", pch = 16,
+       col = "#496785", xlab = "Fitted values",
+       ylab = expression(sqrt(abs("Standardized residual"))))
+  lines(lowess(fitted, spread), col = "#D76A2B", lwd = 2)
+}
+```
+
+{{< pagebreak >}}
+
+## Model 1: Budget and Maximum Willingness to Pay
+
+The first model examines the linear association between monthly discretionary budget and maximum willingness to pay:
+
+$$
+\text{Maximum WTP}_i = \beta_0 + \beta_1\text{Budget}_i + \varepsilon_i.
+$$
+
+```{r}
+#| label: fig-assumptions-budget
+#| fig-cap: "Residual diagnostics for maximum WTP regressed on budget. The long upper tail and uneven residual spread raise concerns about normality and constant variance."
+#| fig-width: 9
+#| fig-height: 6
+#| fig-pos: H
+#| out-width: "90%"
+#| fig-align: center
+model1 <- lm(max_wtp_cad ~ budget_cad, data = dat)
+regression_diagnostics(model1)
+```
+
+The residuals have a pronounced upper tail and uneven spread across fitted values, raising concerns about normality and constant variance. The residual-versus-fitted smooth also departs from zero. Ordinary regression inference is therefore not used for the primary budget-WTP conclusion.
+
+{{< pagebreak >}}
+
+## Model 2: General Embarrassment and Communication Discomfort
+
+The second model examines the linear association between general embarrassment and communication discomfort:
+
+$$
+\text{General embarrassment}_i = \alpha_0 +
+\alpha_1\text{Communication discomfort}_i + \varepsilon_i.
+$$
+
+```{r}
+#| label: fig-assumptions-embarrassment
+#| fig-cap: "Residual diagnostics for general embarrassment regressed on communication discomfort. Residuals are roughly symmetric, with a modest increase in spread at higher fitted values."
+#| fig-width: 9
+#| fig-height: 6
+#| fig-pos: H
+#| out-width: "90%"
+#| fig-align: center
+model2 <- lm(general_embarrassment ~ communication_discomfort, data = dat)
+regression_diagnostics(model2)
+```
+
+Residuals are approximately symmetric, with small Q-Q departures and a modest increase in spread at higher fitted values. Normality appears more plausible than in Model 1, but constant variance is not established. This model describes association between two bounded ratings, rather than agreement across situations.
+
+{{< pagebreak >}}
+
+## Maximum WTP and the Six Characteristics
+
+These plots assess the relationship shapes relevant to the six primary Spearman analyses. Binary responses are shown as two groups; budget and the three ordinal ratings are shown as scatter plots.
+
+```{r}
+#| label: fig-wtp-six
+#| fig-cap: "Maximum WTP versus the six measured characteristics. Higher ordinal ratings tend to accompany higher WTP, while budget shows a less clear pattern and binary-group distributions overlap. Asinh spacing retains all responses; horizontal jitter is display-only."
+#| fig-width: 12.5
+#| fig-height: 8
+#| out-width: "100%"
+#| fig-pos: H
+source("plot_wtp_relationships.R", local = TRUE)
+plot_wtp_relationships(dat)
+```
+
+The vertical axis uses a nonlinear scale to display zero and large WTP values together; labels show the original amounts in CAD. Horizontal jitter affects display only.
+
+Higher ordinal ratings tend to accompany higher WTP, although many zero responses occur throughout. Budget shows a less clear pattern, and the binary groups overlap. These plots do not establish statistical significance; adjusted results follow below. Repeated ratings and zero WTP create tied ranks, and the highest response is retained. Regression influence diagnostics and confirmation of the sampling design remain limitations.
+
+{{< pagebreak >}}
+
+# Statistical Results
+
+## Methods
+
+Six two-sided, exploratory Spearman correlations (Spearman, 1904) assessed associations with maximum WTP. Respondent-level bootstrap resampling (20,000 samples) provided pointwise 95% confidence intervals (Efron, 1979). Approximate p-values accommodate tied ranks. Holm correction (Holm, 1979) covers all 14 comparisons retained from exploration (Appendix A); confidence intervals are not multiplicity-adjusted.
+
+## Results
+
+| Characteristic | Correlation | 95% confidence interval | Adjusted p |
+|:--|--:|:--|--:|
+| Monthly discretionary budget | 0.138 | [-0.077, 0.335] | 0.376 |
+| Easily embarrassed (Yes = 1) | 0.216 | [0.031, 0.379] | 0.193 |
+| Self-conscious after mistakes (Yes = 1) | 0.184 | [-0.004, 0.344] | 0.239 |
+| Worry about others' judgment | 0.310 | [0.111, 0.489] | 0.016 |
+| General embarrassment | 0.359 | [0.161, 0.533] | 0.004 |
+| Communication discomfort | 0.375 | [0.174, 0.554] | 0.002 |
+
+: Associations with maximum WTP (n = 92). Binary items use No = 0 and Yes = 1.
+
+Communication discomfort, general embarrassment and worry about others' judgment were **positively associated with maximum WTP** after adjustment. Respondents with higher ratings tended to report higher maximum amounts. Budget and the two binary self-description items did not show sufficient evidence of association at the adjusted 5% level. These results do not establish that embarrassment causes payment.
+
+{{< pagebreak >}}
+
+# References 
+
+Efron, B. (1979). Bootstrap methods: Another look at the jackknife. *The Annals of Statistics, 7*(1), 1-26. <https://doi.org/10.1214/aos/1176344552>
+
+Holm, S. (1979). A simple sequentially rejective multiple test procedure. *Scandinavian Journal of Statistics, 6*(2), 65-70. <https://www.jstor.org/stable/4615733>
+
+Spearman, C. (1904). The proof and measurement of association between two things. *The American Journal of Psychology, 15*(1), 72-101. <https://doi.org/10.2307/1412159>
+
+{{< pagebreak >}}
+
+# Appendix A: Multiple-Testing Table
+
+All 14 comparisons are retained for transparent Holm correction. Supplementary subgroup tests do not describe the full sample; Wilcoxon tests concern rank distributions.
+
+| Comparison | n | Raw p | Holm-adjusted p |
+|:--|--:|--:|--:|
+| Monthly discretionary budget vs. maximum WTP | 92 | 0.188 | 0.376 |
+| Easily embarrassed (Yes vs. No) vs. maximum WTP | 92 | 0.0386 | 0.193 |
+| Self-conscious after mistakes (Yes vs. No) vs. maximum WTP | 92 | 0.0797 | 0.239 |
+| Worry about others' judgment vs. maximum WTP | 92 | 0.0026 | 0.0156 |
+| General embarrassment vs. maximum WTP | 92 | 0.000436 | 0.00392 |
+| Communication discomfort vs. maximum WTP | 92 | 0.000234 | 0.00234 |
+| Shirt vs. lateness payment intention | 92 | 1.71e-08 | 2.39e-07 |
+| Budget vs. WTP among positive-WTP respondents | 32 | 9.17e-05 | 0.00101 |
+| Budget vs. any positive WTP | 92 | 0.734 | 0.734 |
+| Student status vs. lateness payment | 92 | 3.71e-06 | 4.82e-05 |
+| Student status vs. shirt payment | 92 | 0.0444 | 0.193 |
+| Student status vs. any positive WTP | 92 | 0.00156 | 0.0109 |
+| Student status vs. budget ranks | 92 | 1.41e-05 | 0.000169 |
+| Student status vs. WTP ranks | 92 | 0.000539 | 0.00431 |
+
+{{< pagebreak >}}
+
+# Appendix B: Code
+
+Code is shown without repeat execution. Data operations, figures and statistical tests are separated below. The CSV and WTP plotting script must accompany the QMD.
+
+## Data Operations and Descriptive Statistics
+
+```{r}
+#| label: appendix-data-code
+#| echo: true
+#| eval: false
+#| ref.label: [setup-plots, tbl-summary-numeric, tbl-summary-categorical]
+```
+
+## Plots and Tables
+
+The three rating plots use the following R chunks.
+
+```{r}
+#| label: appendix-plots-code
+#| echo: true
+#| eval: false
+#| ref.label: [fig-embarrassment-1, fig-embarrassment-2, fig-embarrassment-3]
+```
+
+## Regression Models and Assumption Diagnostics
+
+These R chunks fit the two supplementary regression models and generate the residual diagnostics above. They are displayed here without a second execution.
+
+```{r}
+#| label: appendix-assumptions-code
+#| echo: true
+#| eval: false
+#| ref.label: [setup-regression-diagnostics, fig-assumptions-budget, fig-assumptions-embarrassment]
+```
+
+## WTP Relationship Plots
+
+This function is sourced from plot_wtp_relationships.R to generate the six-panel figure.
+
+```{r}
+#| label: appendix-wtp-code
+#| echo: true
+#| eval: false
+# All calculations and figures use R. Source this file to load the plotting function.
+# As a standalone script: Rscript plot_wtp_relationships.R [input.csv] [output_folder]
+plot_wtp_relationships <- function(d, panels = 1:6, footer = TRUE) {
+vars <- c("budget_cad", "embarrassed_easily", "self_conscious",
+          "judgment_worry", "general_embarrassment", "communication_discomfort")
+labels <- c("Monthly discretionary budget ($)", "Easily embarrassed",
+            "Self-conscious after mistakes", "Worry about others' judgment (1-10)",
+            "General embarrassment (1-10)", "Communication discomfort (1-10)")
+stopifnot(all(c(vars, "max_wtp_cad") %in% names(d)))
+stopifnot(nrow(d) > 1, !anyNA(d[c(vars, "max_wtp_cad")]))
+stopifnot(all(vapply(d[c(vars, "max_wtp_cad")], is.numeric, logical(1))))
+stopifnot(all(d$max_wtp_cad >= 0), all(d$budget_cad >= 0))
+for (v in vars[2:3]) stopifnot(all(d[[v]] %in% 0:1))
+for (v in vars[4:6]) stopifnot(all(d[[v]] %in% 1:10))
+
+# asinh keeps zero values and every high response visible, without adding a constant.
+# The axis labels show original dollar values. No model is fitted on this display scale.
+y <- asinh(d$max_wtp_cad)
+ticks <- sort(unique(c(0, 1, 2, 5, 10, 20, 50, 100, 150, max(d$max_wtp_cad))))
+ticks <- ticks[ticks <= max(d$max_wtp_cad)]
+draw_panel <- function(k) {
+  set.seed(304 + k)
+  x <- d[[vars[k]]]
+  binary <- k %in% 2:3
+  xlim <- if (binary) c(.5, 2.5) else if (k >= 4) c(.65, 10.35) else range(x)
+  plot(NA, xlim = xlim, ylim = c(-.10, max(y) + .12),
+       xlab = labels[k], ylab = "Maximum WTP (asinh spacing)",
+       main = paste0(LETTERS[k], ". ", strsplit(labels[k], " (", fixed = TRUE)[[1]][1]),
+       axes = FALSE, bty = "l")
+  abline(h = asinh(ticks), col = "#E7EBEE", lwd = .7)
+  axis(2, at = asinh(ticks), labels = paste0("$", format(ticks, trim = TRUE)), las = 1)
+  if (binary) {
+    axis(1, at = 1:2, labels = c("No", "Yes"))
+    # Compute hinges, whiskers and outliers in original dollars first.
+    boxes <- boxplot(d$max_wtp_cad ~ factor(x, levels = 0:1), plot = FALSE)
+    boxes$stats <- asinh(boxes$stats)
+    boxes$out <- asinh(boxes$out)
+    bxp(boxes, add = TRUE, axes = FALSE, outline = FALSE,
+        col = c("#DEE8EF", "#DDEEEA"), border = "#294C60", boxwex = .45)
+    points(x + 1 + runif(length(x), -.17, .17), y,
+           pch = 16, cex = .65, col = adjustcolor("#294C60", alpha.f = .55))
+  } else {
+    if (k >= 4) axis(1, at = 1:10) else axis(1, at = pretty(x), labels = paste0("$", format(pretty(x), trim = TRUE)))
+    shown_x <- if (k >= 4) x + runif(length(x), -.15, .15) else x
+    points(shown_x, y, pch = 16, cex = .7,
+           col = adjustcolor("#294C60", alpha.f = .55))
+  }
+  box(bty = "l", col = "#596571")
+}
+
+
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mfrow = if (length(panels) == 6) c(2, 3) else c(1, 1),
+      mar = c(4.7, 4.7, 3, 1), oma = if (footer) c(3.4, 0, 0, 0) else c(0, 0, 0, 0),
+      mgp = c(3, .8, 0), cex = .85,
+      col.lab = "#294C60", col.main = "#294C60")
+  for (k in panels) draw_panel(k)
+  if (footer) {
+    note <- sprintf("All %d respondents retained: %d zero responses; maximum WTP $%s.",
+                    nrow(d), sum(d$max_wtp_cad == 0),
+                    format(max(d$max_wtp_cad), trim = TRUE))
+    mtext(note, side = 1, outer = TRUE, line = 1, cex = .8)
+    mtext("Asinh spacing; ticks show original dollars. Horizontal jitter is display-only.",
+          side = 1, outer = TRUE, line = 2.2, cex = .8)
+  }
+  invisible(NULL)
+}
+
+# Generate the six-panel figure using the data loaded above.
+plot_wtp_relationships(dat)
+
+```
+
+## Statistical Tests
+
+Use the data loaded above for Spearman correlations, bootstrap confidence intervals, supplementary tests, and Holm adjustment across the original 14 comparisons.
+
+```{r}
+#| label: appendix-tests-code
+#| echo: true
+#| eval: false
+vars <- c("budget_cad", "embarrassed_easily", "self_conscious",
+          "judgment_worry", "general_embarrassment",
+          "communication_discomfort")
+stopifnot(n == 92, !anyNA(d[c(vars, "max_wtp_cad",
+                            "pay5_lateness", "buy20_shirt")]))
+
+# Spearman tests and pointwise respondent-bootstrap intervals.
+set.seed(20261019)
+idx <- replicate(20000, sample.int(n, n, replace = TRUE))
+ci <- function(x) quantile(x[is.finite(x)], c(.025, .975), type = 7)
+rho <- function(x, y) cor(x, y, method = "spearman")
+spearman <- function(x, y) cor.test(x, y, method = "spearman",
+                                   exact = FALSE)
+correlations <- do.call(rbind, lapply(vars, function(v) {
+  t <- spearman(d[[v]], d$max_wtp_cad)
+  draws <- apply(idx, 2, function(i) rho(d[[v]][i], d$max_wtp_cad[i]))
+  limits <- ci(draws)
+  data.frame(variable = v, rho = unname(t$estimate),
+             low = limits[1], high = limits[2], p = t$p.value)
+}))
+
+# Descriptive scenario comparison; preserve the paired test only for Holm accounting.
+tab <- table(factor(d$pay5_lateness, 0:1),
+             factor(d$buy20_shirt, 0:1))
+paired <- binom.test(tab[1, 2], tab[1, 2] + tab[2, 1], p = .5)
+
+
+# Retain all seven supplementary tests in the original 14-test family.
+pos <- d$max_wtp_cad > 0
+extra_p <- c(
+  spearman(d$budget_cad[pos], d$max_wtp_cad[pos])$p.value,
+  spearman(d$budget_cad, as.integer(pos))$p.value)
+for (v in c("pay5_lateness", "buy20_shirt", "any_positive_wtp")) {
+  y <- if (v == "any_positive_wtp") as.integer(pos) else d[[v]]
+  counts <- table(factor(d$student_status,
+                         c("Domestic", "International")), factor(y, 0:1))
+  extra_p <- c(extra_p, fisher.test(counts)$p.value)
+}
+for (v in c("budget_cad", "max_wtp_cad")) {
+  t <- wilcox.test(d[[v]] ~ d$student_status,
+                   exact = FALSE, correct = TRUE)
+  extra_p <- c(extra_p, t$p.value)
+}
+p_all <- c(correlations$p, paired$p.value, extra_p)
+stopifnot(length(p_all) == 14)
+adjusted <- p.adjust(p_all, method = "holm")
+correlations$holm_p <- adjusted[1:6]
+# Table labels and formatting match the revised report.
+labels <- c("Monthly discretionary budget", "Easily embarrassed (Yes = 1)",
+            "Self-conscious after mistakes (Yes = 1)",
+            "Worry about others' judgment", "General embarrassment",
+            "Communication discomfort")
+format_p <- function(p) ifelse(p < .001,
+  formatC(p, format = "e", digits = 2), sprintf("%.3f", p))
+result_table <- data.frame(
+  Characteristic = labels, Correlation = sprintf("%.3f", correlations$rho),
+  "95% confidence interval" = sprintf("[%.3f, %.3f]",
+                                      correlations$low, correlations$high),
+  "Adjusted p" = format_p(correlations$holm_p), check.names = FALSE)
+knitr::kable(result_table,
+  caption = "Associations with maximum WTP (n = 92). Binary items use No = 0 and Yes = 1.")
+```
