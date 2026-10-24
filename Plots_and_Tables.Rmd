@@ -14,33 +14,64 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 This is regular text. You can write **bold**, *italic*, and lists here.
 You can also put R results inside a sentence, like this: today is `r Sys.Date()`.
 
-# Load packages
-
-```{r packages, echo=FALSE}
-# install.packages(c("easystats", "readr", "knitr", "ggplot2"))
+```{r packages_read_data, echo=FALSE}
 library(easystats)   # loads datawizard, see, correlation, report, etc.
 library(readr)
 library(knitr)
 library(ggplot2)
-```
-
-```{r read-data, echo=FALSE}
 dat <- read.csv("The_Significant_Five_dataset.csv") 
 ```
 
-# Table: proportion of Yes / No
+# Table: Proportion of students who agree or disagree in several statements about minor embarrassment
 
-Replace `q_yesno` with your Yes/No column name.
+In our survey, participants have been asked whether they agree or disagree with 2 statements. The first statement is "I tend to feel embarrassed easily in minor awkward situations", labelled 'embarrassed_easily' in the table below. The second statement is "I feel self-conscious when I make a small mistake in front of other people", labelled "self_conscious".
 
-```{r yes-no-table}
-vars <- c("embarrassed_easily", "self_conscious", "pay5_lateness", "buy20_shirt")
+\begin{center}
+\textbf{Table 1}: Number and percentage of students who agree or disagree in 2 statements
+\end{center}
 
-labels <- c(
-  embarrassed_easily = "Gets embarrassed easily in minor awkward situations",
-  self_conscious     = "Feeling self-conscious when making a small mistake in front of others",
-  pay5_lateness      = "Paying $5 to silently check-in due to lateness",
-  buy20_shirt        = "Paying $20 to change a new shirt due to a large stain on the old one"
+```{r agree-disagree-table, echo=FALSE}
+vars <- c("embarrassed_easily", "self_conscious")
+
+make_row <- function(v) {
+  x <- dat[[v]]
+  x <- x[!is.na(x)]               
+
+  n_yes <- sum(x == 1)
+  n_no  <- sum(x == 0)
+  total <- n_yes + n_no
+
+  data.frame(
+    Statements = v,
+    Agree   = sprintf("%d (%.1f%%)", n_yes, 100 * n_yes / total),
+    Disagree    = sprintf("%d (%.1f%%)", n_no,  100 * n_no  / total),
+    Total = total
+  )
+}
+
+agree_disagree_table <- do.call(rbind, lapply(vars, make_row))
+
+knitr::kable(
+  agree_disagree_table,
+  row.names = FALSE,
+  align = c("l", "c", "c", "c"),
+  booktabs = TRUE,
+  caption = NULL
 )
+```
+
+At least two-thirds of participants agree that they are either easily embarrassed or self-conscious in awkward situations.
+
+# Table: Proportion of students who choose to spend some money to solve minor embarassments
+
+In our survey, participants were asked whether they would pay money in specific situations. The first situation is whether they want to spend \$5 to silently check-in due to arriving 15 minutes late at a tutorial, which is labeled as "pay5_lateness". The second situation is whether they want to spend \$20 to change a new shirt due to a large stain on the old one, right before giving an important presentation, which is labelled as "buy20_shirt".
+
+\begin{center}
+\textbf{Table 2}: Number and percentage of students who choose to spend some money or not
+\end{center}
+
+```{r yes-no-table, echo=FALSE}
+vars <- c("pay5_lateness", "buy20_shirt")
 
 make_row <- function(v) {
   x <- dat[[v]]
@@ -51,7 +82,7 @@ make_row <- function(v) {
   total <- n_yes + n_no
 
   data.frame(
-    Question = labels[[v]],          # <- uses the friendly label
+    Question = v,        
     Yes   = sprintf("%d (%.1f%%)", n_yes, 100 * n_yes / total),
     No    = sprintf("%d (%.1f%%)", n_no,  100 * n_no  / total),
     Total = total
@@ -65,43 +96,64 @@ knitr::kable(
   row.names = FALSE,
   align = c("l", "c", "c", "c"),
   booktabs = TRUE,
-  caption = "Number and percentage of Yes and No answers"
+  caption = NULL
 )
 ```
 
-# Scatter plot: two Likert-scale questions
+The results suggest that the situation's context influences participants’ willingness to pay to resolve a problem. A minority of participants (22.8%) were willing to pay \$5 to check in silently, whereas nearly two-thirds (62.0%) were willing to pay \$20 to replace a shirt. This pattern supports the interpretation that willingness to pay depends more on the perceived seriousness of the situation than on the amount of money involved.
 
-Likert items are discrete (e.g., 1-5), so points overlap heavily. Using
-`geom_jitter()` spreads them out so you can see density. Replace `likert_a`
-and `likert_b` with your column names.
+# Scatter plots: Relationships of participants' responses between three Likert-scale questions
 
-```{r likert-scatter}
+The first scatter plot shows the relationship between ordinal responses for how embarrassed participants feel in minor awkward situations on campus and how worried they feel about being judged by other students when they make a mistake on campus.
+
+\begin{center}
+\textbf{Plot 1:} Relationship between embarrassment level when experiencing minor awkward situations on campus and the anxiety level when being judged
+\end{center}
+
+```{r scatter-plot-1, echo=FALSE}
 ggplot(dat, aes(x = general_embarrassment, y = judgment_worry)) +
   geom_point() + 
-  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkgreen") +
   scale_x_continuous(breaks = 1:10) +
   scale_y_continuous(breaks = 1:10) +
-  labs(x = "general_embarrassment", y = "judgment_worry",
-       title = "Relationship between General embarrassment and Judgement worry") +
-  theme_modern()    # theme from the 'see' package (easystats)
-
-ggplot(dat, aes(x = judgment_worry, y = communication_discomfort)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
-  scale_x_continuous(breaks = 1:10) +
-  scale_y_continuous(breaks = 1:10) +
-  labs(x = "judgment_worry", y = "communication_discomfort",
-       title = "Relationship between Judgment worry and Communication discomfort") +
-  theme_modern()
-
-ggplot(dat, aes(x = communication_discomfort, y = general_embarrassment)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE, color = "#0072B2") +
-  scale_x_continuous(breaks = 1:10) +
-  scale_y_continuous(breaks = 1:10) +
-  labs(x = "Communication Discomfort Level", # please fix this, just don't use underscores for plotting
-       y = "general_embarrassment",
-       title = "Relationship between Communication discomfort and General embarrassment") +
+  labs(x = "Level of embarrassement", y = "Anxiety level when being judged",
+       title = NULL) +
   theme_modern()
 ```
 
+The second scatter plot shows the relationship of ordinal responses between the level of feeling actively worried about being judged by other students when making a mistake on campus and the uncomfortable level in direct communication about an awkward or embarrassing situation to a peer or instructor
+
+\begin{center}
+\textbf{Plot 2:} Relationship between the anxiety level when being judged and uncomfortable level
+\end{center}
+
+```{r scatter-plot-2, echo=FALSE}
+ggplot(dat, aes(x = judgment_worry, y = communication_discomfort)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "navyblue") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Anxiety level when being judged", y = "Uncomfortable level",
+       title = NULL) +
+  theme_modern()
+```
+
+The final scatter plot shows the relationship between ordinal responses for the uncomfortable level in direct communication about an awkward or embarrassing situation to a peer or instructor and the embarrassment level when experiencing minor awkward situations on campus
+
+\begin{center}
+\textbf{Plot 3:} Relationship between uncomfortable level and embarrassment level when experiencing minor awkward situations on campus
+\end{center}
+
+```{r scatter-plot-3, echo=FALSE}
+ggplot(dat, aes(x = communication_discomfort, y = general_embarrassment)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "#4510FF") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(breaks = 1:10) +
+  labs(x = "Uncomfortable level", 
+       y = "Level of embarrassment",
+       title = NULL) +
+  theme_modern()
+```
+
+Although the data are ordinal, the Likert-scale responses showed positive correlations within each pair of variables. This suggests that participants who rated one item highly tended to rate the others highly as well. However, a Cronbach’s alpha test is required to formally assess the internal consistency of these items.
