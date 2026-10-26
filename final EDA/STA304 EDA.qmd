@@ -300,7 +300,7 @@ For lateness, the International-minus-Domestic difference was **43.1 percentage 
 
 ## RQ3: Internal Consistency of the Three Ratings
 
-For proposal RQ3, raw Cronbach's alpha for the three rating items (Q5-Q7: judgment worry, general embarrassment and communication discomfort) was **0.793** (95% bootstrap CI **[0.688, 0.861]**; Cronbach, 1951). All items are positively oriented 1-10 ratings; the CI uses 20,000 whole-respondent resamples. Alpha summarizes the internal consistency of these three items.
+For proposal RQ3, raw Cronbach's alpha for the three rating items (Q5-Q7: judgment worry, general embarrassment and communication discomfort) was **0.793** (95% bootstrap CI **[0.688, 0.861]**; Cronbach, 1951). All items are positively oriented 1-10 ratings; the CI uses 20,000 whole-respondent resamples. The raw Cronbach's alpha of 0.793 suggests acceptable internal consistency among the three rating items in this sample.
 
 {{< pagebreak >}}
 
