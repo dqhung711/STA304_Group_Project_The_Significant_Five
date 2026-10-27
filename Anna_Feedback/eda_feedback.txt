@@ -1,0 +1,19 @@
+STA304 Exploratory Data Analysis Feedback
+
+Overall, I think this report is good since it is concise.
+
+Disclaimer: in the process of constructing feedback, I recorded my audio and got AI to rephrase my feedback in a concise, clear manner so that I can mark faster + you get more detailed feedback. I did not run any of the assignments through AI.
+
+Math mode
+
+This is very nitpicky, but write "raw $p$" instead of "raw p", so the $p$-value is in math mode. The same goes for $z$ instead of z in the $z$-score.
+
+Final summary sentences
+
+The main thing I would personally add is a final sentence after each result that makes clear what was going on. For example, you could write, "There is no association between a student's budget and their willingness to pay money to avoid a minor embarrassment," and say whether budget means per month, per week, or disposable. You could write, "International students are more likely to pay $5 for lateness," and say what lateness means. You could also write, "Cronbach's alpha confirms that the data are reliable, with an internal consistency score of 0.793."
+
+Grade breakdown
+
+No marks were deducted.
+
+Total (2 / 2)
