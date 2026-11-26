@@ -1,0 +1,26 @@
+Margin Notes | STA304 | Team handoff v3.1
+
+View on Windows 11 or macOS
+Extract the ZIP and double-click OPEN WEBSITE.html in the top folder. The
+page includes its own images, styles, controls and results. Open it in a
+desktop browser. A messaging app may show only an attachment preview.
+
+Run or deploy the R Shiny website
+Keep the app folder together. In R, from Shiny-source, run
+  shiny::runApp("app")
+The two local launchers also try R and Shiny, then offer the offline HTML
+if the runtime is unavailable. For Posit Connect Cloud the application
+entry is Shiny-source/app/app.R. Include the whole app folder, including
+www and data. The team can then test the public URL in a signed-out browser
+and add the working URL to the repository README for submission.
+
+Data and interpretation
+The default app uses summaries and plot images generated from the group's
+cleaned survey (92 respondents). It runs with the files included here.
+The ZIP contains no respondent IDs or row-level CSV. Budget plots show
+reported amount pairs by group, with coincident responses combined.
+The private live-data mode accepts the authorized cleaned CSV via
+STA304_SURVEY_CSV. Keep that CSV outside the public deployment.
+Full-study findings cite the final EDA. Group selection updates the chart
+and its descriptive summary. The standalone HTML is a snapshot of this
+release and is maintained separately from the R application.
