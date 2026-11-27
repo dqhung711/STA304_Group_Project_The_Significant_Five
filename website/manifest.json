@@ -886,7 +886,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "4f66ec2baa6f84c4295211f401511c7c"
+      "checksum": "4c33eb2a4d9f34aef62fab467f1c9e35"
     },
     "data/summary.rds": {
       "checksum": "abaa1eb4f94a88249105e491be97d799"
@@ -898,7 +898,7 @@
       "checksum": "a3c696889a97dea57b5b2be9c8a7d2b7"
     },
     "www/style.css": {
-      "checksum": "26a7a136e8b00bf8065ff8524e7108e4"
+      "checksum": "47625a64400cc520bbd674ada6037e62"
     }
   },
   "users": null
