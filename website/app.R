@@ -135,7 +135,7 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
         make_tab("budget","Monthly budget","01"),make_tab("scenes","Payment scenarios","02"),make_tab("ratings","Three ratings","03")),
       tags$div(class="controls",
         selectInput("group","Student group",choices,selectize=FALSE,width="100%"),
-        conditionalPanel("input.view === 'budget'",selectInput("amount_measure","Show distribution",c("Monthly budget"="budget","Maximum offer"="wtp"),selectize=FALSE,width="100%")),
+        conditionalPanel("input.view === 'budget'",selectInput("amount_measure","Show distribution",c("Monthly budget"="budget","Willingness to pay"="wtp"),selectize=FALSE,width="100%")),
         conditionalPanel("input.view === 'budget'",selectInput("axis","Show as",c("Percent of group"="percent","Number of respondents"="count"),selectize=FALSE,width="100%")),
         conditionalPanel("input.view === 'scenes'",selectInput("scene","Survey scenario",c("$20 · Stained shirt"="shirt","$5 · Late arrival"="late"),selectize=FALSE,width="100%")),
         conditionalPanel("input.view === 'ratings'",selectInput("item","Survey item",rating_items,selectize=FALSE,width="100%")),
@@ -146,12 +146,12 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
             tags$div(class="custom-colour-status",role="status",`aria-live`="polite",textOutput("custom_colour_status"))))),
       conditionalPanel("input.view === 'budget'",
         tags$div(class="figure-grid",tags$div(class="figure-area",eyebrow("Figure 01 / Amounts"),
-          tags$h3("How do budgets and offers vary?"),
-          tags$p(class="caption","Choose monthly budget or the maximum extra amount a student would pay to avoid directly discussing a minor embarrassing situation on campus. The bars show separate distributions, not matched answers."),
+          tags$h3("How do monthly budgets and willingness to pay vary?"),
+          tags$p(class="caption","Choose monthly budget or the maximum extra amount a student would pay to avoid directly discussing a minor embarrassing situation on campus."),
           plotOutput("budget_plot",height="340px"),
           tags$p(class="plot-key","Each label gives the number in the category, the group size, and the percentage of that group.")),
           tags$aside(class="margin-reading",eyebrow("Reading the figure"),uiOutput("budget_read"),
-            if(is_eda_source) report_note("We compared each student's budget with their own maximum offer. Across all 92 students, there was no clear pattern of students with larger budgets offering more.")))),
+            if(is_eda_source) report_note("Looking at all 92 students (58 domestic and 34 international), we compared each student's monthly budget with the most they would pay extra to avoid talking directly about a minor embarrassing situation on campus. Students with more money left after essential expenses were not consistently willing to pay more. The bars show how students answered each question separately.")))),
       conditionalPanel("input.view === 'scenes'",
         tags$div(class="figure-grid",tags$div(class="figure-area",eyebrow("Figure 02 / Payment intentions"),uiOutput("scene_figure")),
           tags$aside(class="margin-reading",eyebrow("Reading the figure"),uiOutput("scene_read")))),
@@ -166,9 +166,9 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
       tags$h2(id="findings-title", "Key findings."),
       tags$div(class="findings-grid",
         tags$div(tags$h3("Naming a price"),
-                 tags$p("Among all 92 respondents, 60 entered $0 as the most extra they would pay to avoid a direct conversation. The paired answers did not show clear evidence that a higher monthly budget went with a higher maximum offer.")),
+                 tags$p("Among all 92 respondents, 60 said they would pay $0 extra to avoid a direct conversation. We found no clear evidence that students with higher monthly budgets were willing to pay more.")),
         tags$div(tags$h3("Making a choice"),
-                 tags$p("For the $20 shirt, 57 of 92 said yes. For the $5 late arrival, 21 of 92 said yes, including 17 of 34 international and 4 of 58 domestic students. Each question changed both the price and the situation.")),
+                 tags$p("For the $20 shirt, 57 of 92 students said yes. For the $5 late arrival, 21 of 92 said yes, including 17 of 34 international students and 4 of 58 domestic students. Since both the price and scenario differed, these results cannot isolate the effect of price alone.")),
         tags$div(tags$h3("Describing a feeling"),
                  tags$p("Across all 92 respondents, students who gave a higher rating for one feeling tended to rate the others higher too. These hypothetical answers cannot tell us whether those feelings or student status caused a payment choice.")))),
     tags$section(id="method",class="notes",
@@ -176,7 +176,7 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
         tags$div(tags$p(sprintf("The dataset contains %s complete responses, including %s domestic and %s international students.",summary_data$groups$All$n,summary_data$groups$Domestic$n,summary_data$groups$International$n)),
          tags$details(tags$summary("How to interpret these results"),tags$p("The proposal targeted the two Fall 2026 STA304 lecture sections at UTM and planned recruitment through Piazza by student status. Random selection within each group could not be verified. The results describe these respondents’ hypothetical choices. The two payment scenarios change both the price and the situation, so their difference cannot identify a price effect.")),
          tags$details(tags$summary("Methods and sources"),
-          if(is_eda_source) tagList(tags$p("For all 92 respondents, the final exploratory analysis reported Spearman’s rho = 0.138 and a Holm-adjusted p = 0.376 for monthly budget and maximum offer. Cronbach’s alpha for the three ratings was 0.793, with a 95% bootstrap interval of 0.688 to 0.861. Alpha describes internal consistency; it does not establish that the questions measure one trait or validate that trait."),
+          if(is_eda_source) tagList(tags$p("For all 92 respondents, the final exploratory analysis reported Spearman’s rho = 0.138 and a Holm-adjusted p = 0.376 for monthly budget and the maximum amount students were willing to pay. Cronbach’s alpha for the three ratings was 0.793, with a 95% bootstrap interval of 0.688 to 0.861. Alpha describes internal consistency; it does not establish that the questions measure one trait or validate that trait."),
             tags$p("The two-proportion z-tests used Holm adjustment across 14 comparisons: adjusted p = 0.00002584 for late arrival and 0.141 for the shirt. For late arrival, 4 of 58 domestic respondents said yes; the smallest expected count under equal rates was 7.76. A separate two-sided Fisher exact sensitivity check, adjusted across the same 14 tests, gave adjusted p = 0.00004819 for late arrival and 0.193 for the shirt, with the same conclusions."),
             tags$p("Source: The Significant Five’s cleaned survey, codebook, original proposal, and final exploratory data analysis (25 October 2026). All amounts are in Canadian dollars."))
           else tags$p("The original study’s fixed estimates and inferential results are not shown for this dataset. Review the methods and sources before interpreting a different dataset. All amounts are in Canadian dollars.")))))),
@@ -217,9 +217,9 @@ server <- function(input, output, session) {
       values <- d$budget_counts
       labels <- c("Under $500", "$500 to under $1,000", "$1,000 or more")
     } else {
-      validate(need(is.numeric(d$zero_count) && length(d$zero_count) == 1L && is.finite(d$zero_count) && d$zero_count >= 0 && d$zero_count <= n && d$zero_count == floor(d$zero_count), "The maximum-offer summary is invalid."))
+      validate(need(is.numeric(d$zero_count) && length(d$zero_count) == 1L && is.finite(d$zero_count) && d$zero_count >= 0 && d$zero_count <= n && d$zero_count == floor(d$zero_count), "The willingness to pay summary is invalid."))
       values <- c(d$zero_count, n - d$zero_count)
-      labels <- c("Maximum offer: $0", "Maximum offer: above $0")
+      labels <- c("Would pay $0 extra", "Would pay more than $0 extra")
     }
     validate(need(is.numeric(values) && length(values) == length(labels) && all(is.finite(values)) && all(values >= 0) && all(values == floor(values)) && sum(values) == n, "The amount summary does not match the group total."))
     list(values = values, labels = labels, n = n, measure = measure)
@@ -239,7 +239,7 @@ server <- function(input, output, session) {
              sprintf("Of %s, %d had under $500 left after essential expenses, %d had $500 to under $1,000, and %d had $1,000 or more.", group, d$values[1], d$values[2], d$values[3]))
     } else {
       result(sprintf("%s entered $0.", pct(d$values[1], d$n)),
-             sprintf("Of %s, %d would pay nothing extra to avoid discussing an awkward situation directly. The other %d would offer some money. The shirt and late-arrival questions asked about different situations.", group, d$values[1], d$values[2]))
+             sprintf("Of %s, %d would pay nothing extra to avoid discussing an awkward situation directly. The other %d were willing to pay something extra. The shirt and late-arrival questions asked about different situations.", group, d$values[1], d$values[2]))
     }
   })
   output$scene_figure <- renderUI({d<-subset_data();s<-selection();n<-d$n;total<-d$scene_yes[[s$col]];colors<-pal();
@@ -262,7 +262,7 @@ server <- function(input, output, session) {
     if (n == 0L) return(result("No responses in this group.", "Select All respondents or another student group to see results."))
     k<-d$scene_yes[[s$col]]
     tagList(result(share_phrase(k, n),
-                   sprintf("Of %s, %d said they would %s (%s). The other %d would decline.", group_phrase(req(input$group), n), k, s$brief, pct(k, n), n-k)),
+                   sprintf("Among %s, %d out of %d (%s) said they would %s. The other %d would decline.", tolower(group_text(req(input$group))), k, n, pct(k, n), s$brief, n-k)),
             if(is_eda_source) report_note(if(input$scene=="shirt")
               "For the shirt, 26 of 34 international students and 31 of 58 domestic students would pay. The gap in this sample was too uncertain to draw a firm conclusion about the wider groups."
               else "For late arrival, half of the international students (17 of 34) would pay, compared with 4 of 58 domestic students. The survey cannot tell us why their answers differed."))
@@ -282,10 +282,14 @@ server <- function(input, output, session) {
   output$rating_read <- renderUI({d<-subset_data();item<-req(input$item);x<-d$ratings[[item]]
     if (d$n == 0L) return(result("No responses in this group.", "Select All respondents or another student group to see results."))
     higher<-sum(x$counts[7:10])
+    if (item == "communication_discomfort") {
+      midpoint_note <- if (abs(x$mean - 5.5) < 1) "That average is close to the middle of the scale (5.5)." else "The middle of the scale is 5.5."
+      return(result(sprintf("%s chose 7 to 10.", pct(higher, d$n)),
+                    sprintf("Among %s, the average communication discomfort score was %.2f out of 10. %s When asked about discussing an awkward situation directly with a peer or instructor, %d chose 7 to 10, toward the uncomfortable end of the scale.", group_phrase(req(input$group), d$n), x$mean, midpoint_note, higher)))
+    }
     meaning <- switch(item,
       judgment_worry = "Here, a higher rating means more worry about other students judging a mistake.",
-      general_embarrassment = "Here, a higher rating means feeling more embarrassed in an awkward moment on campus.",
-      communication_discomfort = "Here, a higher rating means feeling less comfortable discussing an awkward situation directly.")
+      general_embarrassment = "Here, a higher rating means feeling more embarrassed in an awkward moment on campus.")
     result(sprintf("%s chose 7 to 10.", pct(higher, d$n)),
            sprintf("Of %s, %d chose one of the four highest ratings. %s", group_phrase(req(input$group), d$n), higher, meaning))})
   output$live_status <- renderText(paste(group_text(req(input$group)),subset_data()$n,"respondents.",switch(req(input$view),
