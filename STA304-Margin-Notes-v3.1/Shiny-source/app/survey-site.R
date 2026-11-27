@@ -1,10 +1,20 @@
 library(shiny)
-source("charts.R", local = TRUE)
 
-csv <- Sys.getenv("STA304_SURVEY_CSV", unset = file.path("data","The_Significant_Five_dataset.csv"))
-if (!file.exists(csv)) stop("Set STA304_SURVEY_CSV to the group's cleaned survey CSV.")
+dir <- "STA304-Margin-Notes-v3.1/Shiny-source/app"
+#source("STA304-Margin-Notes-v3.1/Shiny-source/app/charts.R", local = TRUE)
+
+source(paste0(dir, "/charts.R"), local = TRUE)
+
+csv <- paste0(dir, "/data/dataset.csv")
+
+#csv <- Sys.getenv("STA304_SURVEY_CSV", unset = file.path("data","The_Significant_Five_dataset.csv"))
+#if (!file.exists(csv)) stop("Set STA304_SURVEY_CSV to the group's cleaned survey CSV.")
+
 fields <- c("student_status", "budget_cad", "max_wtp_cad", "pay5_lateness", "buy20_shirt",
             "judgment_worry", "general_embarrassment", "communication_discomfort")
+
+# Anna: I don't know why you are using read.csv() multiple times, it's more efficient to just
+# load in the .csv to begin with.
 header <- names(read.csv(csv, nrows = 0))
 stopifnot(all(fields %in% header))
 types <- ifelse(header == "student_status", "character", ifelse(header %in% fields, "numeric", "NULL"))
@@ -41,8 +51,11 @@ report_note <- function(text) tags$div(class="report-note",eyebrow("Full study �
 make_tab <- function(value, title, n) tags$label(class="tab-label",
   tags$input(type="radio", name="view", value=value, checked=if (value=="scenes") "checked" else NULL),
   tags$span(tags$small(n),title))
+
 ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
-  tags$head(tags$link(rel="stylesheet",href="style.css"),tags$script(src="cover.js",defer=NA),
+  tags$head(tags$link(rel="stylesheet",
+                      href=paste0(dir, "/www/style.css")),
+                      tags$script(src=paste0(dir,"/www/cover.js"),defer=NA),
             tags$meta(name="description",content="Interactive findings from a survey of students' willingness to pay to avoid everyday embarrassment.")),
   tags$a(class="skip",href="#explorer","Skip to the figures"),
   tags$header(class="mast", tags$div(class="wrap mast-row",tags$a(class="wordmark",href="#cover",tags$i("///"),"Margin Notes"),
@@ -102,6 +115,7 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
             tags$p("Source: The Significant Five’s cleaned survey, codebook, original proposal, and final exploratory data analysis (25 October 2026). All amounts are in Canadian dollars."))
           else tags$p("The original study’s fixed estimates and inferential results are not shown for this dataset. Review the methods and sources before interpreting a different dataset. All amounts are in Canadian dollars.")))))),
   tags$footer(class="wrap",tags$b("Margin Notes"),tags$span("The Significant Five · Fall 2026"),tags$a(href="#cover","Back to top ↑")))
+
 server <- function(input, output, session) {
   subset_data <- reactive({
     key <- req(input$group)
