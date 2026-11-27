@@ -3,9 +3,9 @@ library(shiny)
 dir <- "STA304-Margin-Notes-v3.1/Shiny-source/app"
 #source("STA304-Margin-Notes-v3.1/Shiny-source/app/charts.R", local = TRUE)
 
-source(paste0(dir, "/charts.R"), local = TRUE)
+source("charts.R", local = TRUE)
 
-csv <- paste0(dir, "/data/dataset.csv")
+csv <- "data/dataset.csv"
 
 #csv <- Sys.getenv("STA304_SURVEY_CSV", unset = file.path("data","The_Significant_Five_dataset.csv"))
 #if (!file.exists(csv)) stop("Set STA304_SURVEY_CSV to the group's cleaned survey CSV.")
@@ -53,9 +53,7 @@ make_tab <- function(value, title, n) tags$label(class="tab-label",
   tags$span(tags$small(n),title))
 
 ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
-  tags$head(tags$link(rel="stylesheet",
-                      href=paste0(dir, "/www/style.css")),
-                      tags$script(src=paste0(dir,"/www/cover.js"),defer=NA),
+                tags$head(tags$link(rel="stylesheet",href="www/style.css"),tags$script(src="www/cover.js",defer=NA),
             tags$meta(name="description",content="Interactive findings from a survey of students' willingness to pay to avoid everyday embarrassment.")),
   tags$a(class="skip",href="#explorer","Skip to the figures"),
   tags$header(class="mast", tags$div(class="wrap mast-row",tags$a(class="wordmark",href="#cover",tags$i("///"),"Margin Notes"),
