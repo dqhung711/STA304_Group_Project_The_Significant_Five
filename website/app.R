@@ -21,6 +21,24 @@ rating_scales <- list(
 palettes <- list(print = c(ink="#282921", muted="#5f6053",line="#d2cdba",primary="#aa3726",secondary="#45665d",paper="#fbf8f0"),
                  coast = c(ink="#232e38",muted="#536372",line="#cbd0cb",primary="#275d91",secondary="#996222",paper="#fbf8f0"))
 is_hex_colour <- function(x) is.character(x) && length(x) == 1L && !is.na(x) && nchar(x, type = "bytes") == 7L && grepl("^#[0-9A-Fa-f]{6}$", x)
+figure_ids <- c("budget", "scenes", "ratings")
+colour_controls <- function(figure = NULL) {
+  suffix <- if (is.null(figure)) "" else paste0("_", figure)
+  palette_id <- paste0("colour", suffix)
+  options <- c("Ink & vermilion" = "print", "Blue & ochre" = "coast", "Custom colour" = "custom")
+  visible <- "input.colour_scope === 'all'"
+  if (!is.null(figure)) {
+    options <- c("Use shared palette" = "shared", options)
+    visible <- sprintf("input.colour_scope === 'current' && input.view === '%s'", figure)
+  }
+  tagList(
+    conditionalPanel(visible, selectInput(palette_id, "Colour palette", options, selectize = FALSE, width = "100%")),
+    conditionalPanel(paste0(visible, " && input.", palette_id, " === 'custom'"),
+      tags$div(class = "custom-colour",
+        textInput(paste0("custom_hex", suffix), "Custom colour (HEX)", value = "#AA3726", placeholder = "#RRGGBB", width = "100%"),
+        tags$div(class = "custom-colour-status", role = "status", `aria-live` = "polite", textOutput(paste0("custom_colour_status", suffix)))))
+  )
+}
 choices <- c("All respondents"="All","Domestic students"="Domestic","International students"="International")
 pct <- function(k,n) sprintf("%.1f%%",100*k/n)
 cash <- function(x) paste0("$",format(x,big.mark=",",trim=TRUE,scientific=FALSE))
@@ -141,11 +159,9 @@ ui <- fluidPage(lang = "en", title="Margin Notes — The price of saving face",
         conditionalPanel("input.view === 'budget'",selectInput("axis","Show as",c("Percent of group"="percent","Number of respondents"="count"),selectize=FALSE,width="100%")),
         conditionalPanel("input.view === 'scenes'",selectInput("scene","Survey scenario",c("$20 · Stained shirt"="shirt","$5 · Late arrival"="late"),selectize=FALSE,width="100%")),
         conditionalPanel("input.view === 'ratings'",selectInput("item","Survey item",rating_items,selectize=FALSE,width="100%")),
-        selectInput("colour","Colour palette",c("Ink & vermilion"="print","Blue & ochre"="coast","Custom colour"="custom"),selectize=FALSE,width="100%"),
-        conditionalPanel("input.colour === 'custom'",
-          tags$div(class="custom-colour",
-            textInput("custom_hex", "Custom colour (HEX)", value="#AA3726", placeholder="#RRGGBB", width="100%"),
-            tags$div(class="custom-colour-status",role="status",`aria-live`="polite",textOutput("custom_colour_status"))))),
+        selectInput("colour_scope", "Apply colours to", c("All figures" = "all", "Current figure only" = "current"), selectize = FALSE, width = "100%"),
+        colour_controls(),
+        lapply(figure_ids, colour_controls)),
       conditionalPanel("input.view === 'budget'",
         tags$div(class="figure-grid",tags$div(class="figure-area",eyebrow("Figure 01 / Amounts"),
           tags$h3("How do monthly budgets and willingness to pay vary?"),
@@ -189,23 +205,43 @@ server <- function(input, output, session) {
     req(key %in% c("All", "Domestic", "International"))
     summary_data$groups[[key]]
   })
-  last_custom_colour <- reactiveVal("#AA3726")
-  observeEvent(input$custom_hex, {
-    if (is_hex_colour(input$custom_hex)) last_custom_colour(toupper(input$custom_hex))
-  }, ignoreNULL = FALSE)
-  pal <- reactive({
-    choice <- req(input$colour)
-    if (choice != "custom") return(palettes[[choice]])
-    value <- input$custom_hex
-    selected <- if (is_hex_colour(value)) toupper(value) else last_custom_colour()
-    out <- palettes$print
-    out[["primary"]] <- selected
-    out
+  read_palette <- function(suffix, shared = NULL) {
+    palette_id <- paste0("colour", suffix)
+    hex_id <- paste0("custom_hex", suffix)
+    last_valid <- reactiveVal("#AA3726")
+    observeEvent(input[[hex_id]], {
+      value <- input[[hex_id]]
+      if (is_hex_colour(value)) last_valid(toupper(value))
+    })
+    output[[paste0("custom_colour_status", suffix)]] <- renderText({
+      if (is_hex_colour(input[[hex_id]])) "Enter a colour as #RRGGBB."
+      else paste0("Enter a valid HEX colour, for example #2A7F9E. Using ", last_valid(), ".")
+    })
+    reactive({
+      choice <- req(input[[palette_id]])
+      if (identical(choice, "shared") && !is.null(shared)) return(shared())
+      if (choice %in% names(palettes)) return(palettes[[choice]])
+      req(identical(choice, "custom"))
+      colours <- palettes$print
+      colours[["primary"]] <- last_valid()
+      colours
+    })
+  }
+  shared_palette <- read_palette("")
+  figure_palettes <- lapply(figure_ids, function(id) read_palette(paste0("_", id), shared_palette))
+  names(figure_palettes) <- figure_ids
+  observe({
+    req(identical(input$colour_scope, "all"))
+    shared_hex <- toupper(shared_palette()[["primary"]])
+    for (id in figure_ids) {
+      updateSelectInput(session, paste0("colour_", id), selected = "shared")
+      updateTextInput(session, paste0("custom_hex_", id), value = shared_hex)
+    }
   })
-  output$custom_colour_status <- renderText({
-    if (is_hex_colour(input$custom_hex)) "Enter a colour as #RRGGBB."
-    else paste0("Enter a valid HEX colour, for example #2A7F9E. Using ", last_custom_colour(), ".")
-  })
+  palette_for <- function(id) {
+    if (identical(input$colour_scope, "current")) return(figure_palettes[[id]]())
+    shared_palette()
+  }
   selection <- reactive(scenes[[req(input$scene)]])
   item_label <- reactive(names(rating_items)[match(req(input$item),rating_items)])
   output$sample_tag <- renderText(sprintf("%s  ·  n = %d",group_text(req(input$group)),subset_data()$n))
@@ -230,7 +266,7 @@ server <- function(input, output, session) {
     d <- amount_counts()
     unit <- req(input$axis)
     req(unit %in% c("percent", "count"))
-    face_amounts(d$values, d$labels, d$n, unit, pal())
+    face_amounts(d$values, d$labels, d$n, unit, palette_for("budget"))
   }, res=110, alt="Distribution of the selected amount in the selected student group. Each category shows a count, group total, and percentage.")
   output$budget_read <- renderUI({
     d <- amount_counts()
@@ -244,7 +280,7 @@ server <- function(input, output, session) {
              sprintf("Of %s, %d would pay nothing extra to avoid discussing an awkward situation directly. The other %d were willing to pay something extra. The shirt and late-arrival questions asked about different situations.", group, d$values[1], d$values[2]))
     }
   })
-  output$scene_figure <- renderUI({d<-subset_data();s<-selection();n<-d$n;total<-d$scene_yes[[s$col]];colors<-pal();
+  output$scene_figure <- renderUI({d<-subset_data();s<-selection();n<-d$n;total<-d$scene_yes[[s$col]];colors<-palette_for("scenes");
     bars<-lapply(c("Domestic","International"),function(g){
       if (input$group != "All" && input$group != g) return(NULL)
       a<-summary_data$groups[[g]];k<-a$scene_yes[[s$col]]
@@ -280,7 +316,7 @@ server <- function(input, output, session) {
     judgment_worry="How strongly do you agree that you worry about being judged by other students when you make a mistake?",
     general_embarrassment="How embarrassed do you feel in minor awkward situations on campus?",
     communication_discomfort="How uncomfortable do you feel discussing an awkward situation directly with a peer or instructor?"))
-  output$ratings <- renderPlot(face_ratings(subset_data()$ratings[[req(input$item)]]$counts,pal()),res=110,alt="Frequency of each response from 1 (low) to 10 (high) for the selected survey item.")
+  output$ratings <- renderPlot(face_ratings(subset_data()$ratings[[req(input$item)]]$counts,palette_for("ratings")),res=110,alt="Frequency of each response from 1 (low) to 10 (high) for the selected survey item.")
   output$rating_read <- renderUI({d<-subset_data();item<-req(input$item);x<-d$ratings[[item]]
     if (d$n == 0L) return(result("No responses in this group.", "Select All respondents or another student group to see results."))
     higher<-sum(x$counts[7:10])
